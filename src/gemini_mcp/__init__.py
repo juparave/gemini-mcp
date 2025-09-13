@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = [
+#   "mcp>=1.14.0",
+# ]
+# ///
 """
 Gemini MCP Server
 

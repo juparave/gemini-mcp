@@ -182,7 +182,7 @@ main() {
     echo ""
     print_info "Next steps:"
     echo "  1. Ensure the Gemini MCP server is configured:"
-    echo "     claude mcp add gemini-mcp uv run python -m gemini_mcp --cwd $SCRIPT_DIR"
+    echo "     claude mcp add gemini-mcp uv run $SCRIPT_DIR/src/gemini_mcp/__init__.py"
     echo "  2. Try the new commands:"
     echo "     /gemini-overview"
     echo "     /gemini-analyze src/"
