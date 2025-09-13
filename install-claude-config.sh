@@ -5,6 +5,9 @@
 
 set -e
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -33,24 +36,24 @@ print_error() {
 check_source_files() {
     local missing_files=()
 
-    if [ ! -d "commands" ]; then
+    if [ ! -d "$SCRIPT_DIR/commands" ]; then
         missing_files+=("commands directory")
     fi
 
-    if [ ! -f "agent__gemini-analyzer.md" ]; then
+    if [ ! -f "$SCRIPT_DIR/agent__gemini-analyzer.md" ]; then
         missing_files+=("agent__gemini-analyzer.md")
     fi
 
     # Check for command files
     local commands=("gemini-analyze" "gemini-audit" "gemini-arch" "gemini-verify" "gemini-overview")
     for cmd in "${commands[@]}"; do
-        if [ ! -f "commands/${cmd}.md" ]; then
+        if [ ! -f "$SCRIPT_DIR/commands/${cmd}.md" ]; then
             missing_files+=("commands/${cmd}.md")
         fi
     done
 
     if [ ${#missing_files[@]} -gt 0 ]; then
-        print_error "Missing required files:"
+        print_error "Missing required files in $SCRIPT_DIR:"
         for file in "${missing_files[@]}"; do
             echo "  - $file"
         done
@@ -61,6 +64,7 @@ check_source_files() {
 # Function to install locally (project-specific)
 install_local() {
     print_info "Installing Claude configuration locally (project-specific)..."
+    print_info "Current directory: $(pwd)"
 
     local target_dir=".claude"
 
@@ -69,13 +73,13 @@ install_local() {
     mkdir -p "$target_dir/agents"
 
     # Copy command files
-    print_info "Copying command files..."
-    cp commands/*.md "$target_dir/commands/"
+    print_info "Copying command files from $SCRIPT_DIR/commands/..."
+    cp "$SCRIPT_DIR/commands"/*.md "$target_dir/commands/"
     print_success "Commands installed to $target_dir/commands/"
 
     # Copy agent file
-    print_info "Copying agent files..."
-    cp agent__gemini-analyzer.md "$target_dir/agents/gemini-analyzer.md"
+    print_info "Copying agent files from $SCRIPT_DIR/..."
+    cp "$SCRIPT_DIR/agent__gemini-analyzer.md" "$target_dir/agents/gemini-analyzer.md"
     print_success "Agent installed to $target_dir/agents/"
 
     print_success "Local installation complete!"
@@ -93,13 +97,13 @@ install_global() {
     mkdir -p "$target_dir/agents"
 
     # Copy command files
-    print_info "Copying command files..."
-    cp commands/*.md "$target_dir/commands/"
+    print_info "Copying command files from $SCRIPT_DIR/commands/..."
+    cp "$SCRIPT_DIR/commands"/*.md "$target_dir/commands/"
     print_success "Commands installed to $target_dir/commands/"
 
     # Copy agent file
-    print_info "Copying agent files..."
-    cp agent__gemini-analyzer.md "$target_dir/agents/gemini-analyzer.md"
+    print_info "Copying agent files from $SCRIPT_DIR/..."
+    cp "$SCRIPT_DIR/agent__gemini-analyzer.md" "$target_dir/agents/gemini-analyzer.md"
     print_success "Agent installed to $target_dir/agents/"
 
     print_success "Global installation complete!"
@@ -109,16 +113,17 @@ install_global() {
 # Function to show what will be installed
 show_files() {
     print_info "The following files will be installed:"
+    print_info "Source location: $SCRIPT_DIR"
     echo ""
     echo "Commands:"
-    for file in commands/*.md; do
+    for file in "$SCRIPT_DIR/commands"/*.md; do
         if [ -f "$file" ]; then
             echo "  - $(basename "$file")"
         fi
     done
     echo ""
     echo "Agents:"
-    if [ -f "agent__gemini-analyzer.md" ]; then
+    if [ -f "$SCRIPT_DIR/agent__gemini-analyzer.md" ]; then
         echo "  - gemini-analyzer.md"
     fi
     echo ""
@@ -171,7 +176,7 @@ main() {
     echo ""
     print_info "Next steps:"
     echo "  1. Ensure the Gemini MCP server is configured:"
-    echo "     claude mcp add gemini-mcp uv run python -m gemini_mcp --cwd $(pwd)"
+    echo "     claude mcp add gemini-mcp uv run python -m gemini_mcp --cwd $SCRIPT_DIR"
     echo "  2. Try the new commands:"
     echo "     /gemini-overview"
     echo "     /gemini-analyze src/"
