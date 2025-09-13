@@ -23,6 +23,85 @@ import mcp.server.stdio
 
 server = Server("gemini-mcp")
 
+# Define available prompts
+PROMPTS = {
+    "analyze_files": {
+        "name": "analyze_files",
+        "description": "Analyze specific files using Gemini's large context window",
+        "arguments": [
+            {
+                "name": "files",
+                "description": "Comma-separated list of file paths to analyze",
+                "required": True
+            },
+            {
+                "name": "prompt",
+                "description": "Custom analysis prompt (optional, defaults to comprehensive analysis)",
+                "required": False
+            }
+        ]
+    },
+    "security_audit": {
+        "name": "security_audit",
+        "description": "Perform security audit on specified paths",
+        "arguments": [
+            {
+                "name": "audit_type",
+                "description": "Type of audit: sql_injection, xss, auth, general, input_validation",
+                "required": True
+            },
+            {
+                "name": "paths",
+                "description": "Comma-separated list of paths to audit",
+                "required": True
+            }
+        ]
+    },
+    "architecture_analysis": {
+        "name": "architecture_analysis",
+        "description": "Analyze codebase architecture and patterns",
+        "arguments": [
+            {
+                "name": "analysis_type",
+                "description": "Type of analysis: overview, dependencies, patterns, structure, coupling",
+                "required": True
+            },
+            {
+                "name": "paths",
+                "description": "Comma-separated list of paths to analyze",
+                "required": True
+            }
+        ]
+    },
+    "verify_feature": {
+        "name": "verify_feature",
+        "description": "Verify if a specific feature is implemented in the codebase",
+        "arguments": [
+            {
+                "name": "feature_name",
+                "description": "Name of the feature to verify (e.g., 'JWT authentication', 'rate limiting')",
+                "required": True
+            },
+            {
+                "name": "search_paths",
+                "description": "Comma-separated list of paths to search (optional, defaults to current directory)",
+                "required": False
+            }
+        ]
+    },
+    "project_overview": {
+        "name": "project_overview",
+        "description": "Get comprehensive overview of the entire project",
+        "arguments": [
+            {
+                "name": "focus",
+                "description": "Optional focus area (e.g., 'API architecture', 'data flow', 'security')",
+                "required": False
+            }
+        ]
+    }
+}
+
 
 @server.list_tools()
 async def handle_list_tools() -> list[types.Tool]:
@@ -168,6 +247,134 @@ async def handle_list_tools() -> list[types.Tool]:
             }
         )
     ]
+
+
+@server.list_prompts()
+async def handle_list_prompts() -> list[types.Prompt]:
+    """List available prompts for Gemini analysis."""
+    return [
+        types.Prompt(
+            name=prompt_info["name"],
+            description=prompt_info["description"],
+            arguments=[
+                types.PromptArgument(
+                    name=arg["name"],
+                    description=arg["description"],
+                    required=arg["required"]
+                ) for arg in prompt_info["arguments"]
+            ]
+        ) for prompt_info in PROMPTS.values()
+    ]
+
+
+@server.get_prompt()
+async def handle_get_prompt(name: str, arguments: dict[str, str]) -> types.GetPromptResult:
+    """Get a specific prompt with filled arguments."""
+    if name not in PROMPTS:
+        raise ValueError(f"Unknown prompt: {name}")
+
+    if name == "analyze_files":
+        files = arguments["files"].split(",") if "files" in arguments else []
+        custom_prompt = arguments.get("prompt", "")
+
+        if not files:
+            raise ValueError("Files argument is required")
+
+        if custom_prompt:
+            prompt_text = f"Analyze these files: {', '.join(files)}\n\nSpecific analysis request: {custom_prompt}"
+        else:
+            prompt_text = f"Provide a comprehensive analysis of these files: {', '.join(files)}\n\nPlease explain:\n- Purpose and functionality of each file\n- Key components and their relationships\n- Code quality and patterns used\n- Any potential improvements or issues"
+
+        return types.GetPromptResult(
+            description=f"Analyze files: {', '.join(files)}",
+            messages=[
+                types.PromptMessage(
+                    role="user",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"Use the gemini_analyze_files tool with files: {json.dumps(files)} and prompt: {json.dumps(prompt_text)}"
+                    )
+                )
+            ]
+        )
+
+    elif name == "security_audit":
+        audit_type = arguments.get("audit_type", "general")
+        paths = arguments["paths"].split(",") if "paths" in arguments else ["."]
+
+        return types.GetPromptResult(
+            description=f"Security audit ({audit_type}) for: {', '.join(paths)}",
+            messages=[
+                types.PromptMessage(
+                    role="user",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"Use the gemini_security_audit tool with audit_type: {json.dumps(audit_type)} and paths: {json.dumps(paths)}"
+                    )
+                )
+            ]
+        )
+
+    elif name == "architecture_analysis":
+        analysis_type = arguments.get("analysis_type", "overview")
+        paths = arguments["paths"].split(",") if "paths" in arguments else ["."]
+
+        return types.GetPromptResult(
+            description=f"Architecture analysis ({analysis_type}) for: {', '.join(paths)}",
+            messages=[
+                types.PromptMessage(
+                    role="user",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"Use the gemini_architecture_analysis tool with analysis_type: {json.dumps(analysis_type)} and paths: {json.dumps(paths)}"
+                    )
+                )
+            ]
+        )
+
+    elif name == "verify_feature":
+        feature_name = arguments.get("feature_name", "")
+        search_paths = arguments.get("search_paths", ".").split(",") if arguments.get("search_paths") else ["."]
+
+        if not feature_name:
+            raise ValueError("Feature name is required")
+
+        return types.GetPromptResult(
+            description=f"Verify feature: {feature_name}",
+            messages=[
+                types.PromptMessage(
+                    role="user",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"Use the gemini_verify_implementation tool with feature_name: {json.dumps(feature_name)} and search_paths: {json.dumps(search_paths)}"
+                    )
+                )
+            ]
+        )
+
+    elif name == "project_overview":
+        focus = arguments.get("focus", "")
+
+        if focus:
+            prompt_text = f"Provide a comprehensive overview of this entire project with a focus on: {focus}"
+        else:
+            prompt_text = "Provide a comprehensive overview of this entire project including architecture, main components, technologies used, and overall purpose."
+
+        return types.GetPromptResult(
+            description=f"Project overview{' (focus: ' + focus + ')' if focus else ''}",
+            messages=[
+                types.PromptMessage(
+                    role="user",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"Use the gemini_analyze_all_files tool with prompt: {json.dumps(prompt_text)}"
+                    )
+                )
+            ]
+        )
+
+    else:
+        raise ValueError(f"Unknown prompt: {name}")
 
 
 async def run_gemini_command(
